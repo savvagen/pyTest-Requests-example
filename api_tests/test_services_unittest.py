@@ -82,6 +82,18 @@ class TestServicesUnit(unittest.TestCase):
 
 
 
+    def test_user_with_json_deserialization(self):
+        url = 'http://localhost:8086/testUser/1'
+        headers = {'content-type': 'application/json', 'accept': 'application/json'}
+        r = requests.get(url, headers=headers)
+        customer = json.loads(r.text, object_hook=as_customer)
+        self.assertEqual(200, r.status_code)
+        self.assertEqual(customer.id, 1)
+        self.assertEqual(customer.firstName, 'Savva')
+        self.assertEqual(customer.email, 'test@gmail.com')
+
+
+
     def test_user_status(self):
         url = 'http://localhost:8086/testUser/status/1'
         headers = {'content-type': 'application/json', 'accept': 'application/json'}
@@ -112,7 +124,7 @@ class TestServicesUnit(unittest.TestCase):
         self.assertEqual(r.json().get('value').get('username'), 'savva_gench')
 
 
-    def test_post_with_params(self):
+    def test_with_user_create_with_params(self):
         url = 'http://localhost:8086/users/add'
         params = {
             "fullname": "Savva Genchevskiy",
@@ -125,6 +137,22 @@ class TestServicesUnit(unittest.TestCase):
         self.assertEqual(200, r.status_code)
         self.assertEqual(r.status_code, requests.codes.ok)
         self.assertEqual(r.text, 'Saved')
+
+
+
+    def test_with_user_create_with_json_serialization(self):
+        url = 'http://localhost:8086/users/add'
+        user = User('test_user1@gmail.com', 'Savva Genchevskiy', 's.g19021992', 'savva_gench')
+        headers = {'content-type': content_type.JSON, 'accept': content_type.JSON}
+        # data = json.dumps(user, default=lambda o: o.__dict__)
+        data = json.dumps(user.__dict__)
+        r = requests.post(url, data=data, headers=headers)
+        body = json.loads(r.text)
+        self.assertEqual(200, r.status_code)
+        self.assertEqual(r.headers.get('content-type'), content_type.JSON_UTF8)
+        self.assertEqual(body['status'], 'Saved')
+        self.assertEqual(r.json().get('value').get('username'), user.username)
+
 
 
     def test_delete_user(self):
@@ -192,31 +220,6 @@ class TestServicesUnit(unittest.TestCase):
         assert_that(body['status'], 'Saved')
         assert_that(r.json().get('value').get('username'), 'savva_gench')
 
-
-
-    def test_with_post_request_user_create(self):
-        url = 'http://localhost:8086/users/add'
-        user = User('test_user1@gmail.com', 'Savva Genchevskiy', 's.g19021992', 'savva_gench')
-        headers = {'content-type': content_type.JSON, 'accept': content_type.JSON}
-        # data = json.dumps(user, default=lambda o: o.__dict__)
-        data = json.dumps(user.__dict__)
-        r = requests.post(url, data=data, headers=headers)
-        body = json.loads(r.text)
-        self.assertEqual(200, r.status_code)
-        self.assertEqual(r.headers.get('content-type'), content_type.JSON_UTF8)
-        self.assertEqual(body['status'], 'Saved')
-        self.assertEqual(r.json().get('value').get('username'), user.username)
-
-
-    def test_get_customer_deserialize_json(self):
-        url = 'http://localhost:8086/testUser/1'
-        headers = {'content-type': 'application/json', 'accept': 'application/json'}
-        r = requests.get(url, headers=headers)
-        customer = json.loads(r.text, object_hook=as_customer)
-        self.assertEqual(200, r.status_code)
-        self.assertEqual(customer.id, 1)
-        self.assertEqual(customer.firstName, 'Savva')
-        self.assertEqual(customer.email, 'test@gmail.com')
 
 
 

@@ -6,7 +6,7 @@ from requests import Request, Session
 from entity.user import User
 from entity.content_type import ContentType
 from entity.customer import *
-
+from entity.greeting import *
 
 
 
@@ -40,6 +40,7 @@ class TestServices(object):
         assert_that(data.get('status'), equal_to('OK'))
 
 
+
     def test_hello_world(self):
         r = requests.get('http://localhost:8086/helloworld')
         body = json.loads(r.text)
@@ -48,13 +49,24 @@ class TestServices(object):
         assert_that(body['content'], equal_to('Hello, World!'))
 
 
-    def test_hello_world(self):
+
+    def test_hello_world_with_params(self):
         data = {'name': 'Savva'}
         r = requests.get('http://localhost:8086/helloworld', params=data)
         body = json.loads(r.text)
         assert_that(r.status_code, equal_to(200))
         assert_that(r.json()['content'], equal_to('Hello, Savva!'))
         assert_that(body.get('content'), equal_to('Hello, Savva!'))
+
+
+
+    def test_hello_world_with_json_serialization(self):
+        data = {'name': 'Savva'}
+        r = requests.get('http://localhost:8086/helloworld', params=data)
+        greeting = json.loads(r.text, object_hook=as_greeting)
+        assert_that(200, r.status_code)
+        assert_that(r.status_code, requests.codes.ok)
+        assert_that(greeting.content, 'Hello, Savva!')
 
 
     def test_user(self):
@@ -67,6 +79,19 @@ class TestServices(object):
         assert_that(r.json()['firstName'], 'Savva')
         assert_that(body['email'], 'test@gmail.com')
         assert_that(body.get('lastName'), equal_to('Genchevskiy'))
+
+
+
+    def test_get_customer_deserialize_json(self):
+        url = 'http://localhost:8086/testUser/1'
+        headers = {'content-type': 'application/json', 'accept': 'application/json'}
+        r = requests.get(url, headers=headers)
+        customer = json.loads(r.text, object_hook=as_customer)
+        assert_that(200, r.status_code)
+        assert_that(customer.id, 1)
+        assert_that(customer.firstName, 'Savva')
+        assert_that(customer.email, 'test@gmail.com')
+
 
 
     def test_user_status(self):
@@ -114,6 +139,20 @@ class TestServices(object):
         assert_that(r.headers['Content-Type'], equal_to('application/json;charset=UTF-8'))
         assert_that(body['status'], 'Saved')
         assert_that(r.json().get('value').get('username'), 'savva_gench')
+
+
+    def test_post_with_json_deserialization(self):
+        url = 'http://localhost:8086/users/add'
+        user = User('test_user1@gmail.com', 'Savva Genchevskiy', 's.g19021992', 'savva_gench')
+        headers = {'content-type': content_type.JSON, 'accept': content_type.JSON}
+        # data = json.dumps(user, default=lambda o: o.__dict__)
+        data = json.dumps(user.__dict__)
+        r = requests.post(url, data=data, headers=headers)
+        body = json.loads(r.text)
+        assert_that(200, r.status_code)
+        assert_that(r.headers.get('content-type'), content_type.JSON_UTF8)
+        assert_that(body['status'], 'Saved')
+        assert_that(r.json().get('value').get('username'), user.username)
 
 
 
@@ -202,28 +241,3 @@ class TestServices(object):
 
 
 
-    def test_with_post_request_user_create(self):
-        url = 'http://localhost:8086/users/add'
-        user = User('test_user1@gmail.com', 'Savva Genchevskiy', 's.g19021992', 'savva_gench')
-        headers = {'content-type': content_type.JSON, 'accept': content_type.JSON}
-        # data = json.dumps(user, default=lambda o: o.__dict__)
-        data = json.dumps(user.__dict__)
-        r = requests.post(url, data=data, headers=headers)
-        body = json.loads(r.text)
-        assert_that(200, r.status_code)
-        assert_that(r.headers.get('content-type'), content_type.JSON_UTF8)
-        assert_that(body['status'], 'Saved')
-        assert_that(r.json().get('value').get('username'), user.username)
-
-
-
-
-    def test_get_customer_deserialize_json(self):
-        url = 'http://localhost:8086/testUser/1'
-        headers = {'content-type': 'application/json', 'accept': 'application/json'}
-        r = requests.get(url, headers=headers)
-        customer = json.loads(r.text, object_hook=as_customer)
-        assert_that(200, r.status_code)
-        assert_that(customer.id, 1)
-        assert_that(customer.firstName, 'Savva')
-        assert_that(customer.email, 'test@gmail.com')
